@@ -145,7 +145,7 @@ cfg.F0s 	= logspace(log10(cfg.minF0),log10(cfg.maxF0),cfg.nF0);
 % also every segment and step...
 
 % change pitch for each new pattern cycle
-cfg.changePitchCycle 	= 0;
+cfg.changePitchCycle 	= 1;
 % change pitch for each segment
 cfg.changePitchSegm 	= 0;           
 % change pitch for each segment-category (every time A changes to B or the other way around)
@@ -183,6 +183,10 @@ cfg.seq = seq;
 
 % save output sequence info cfg
 %cfg.seq = seq.outAudio;
+
+% play - to check only during debugging
+% clear sound
+% sound(cfg.seq.outAudio,cfg.fs)
 
 
 %% extract below numbers for preallocation in logFile

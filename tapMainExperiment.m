@@ -1,5 +1,6 @@
 
 
+
 % Clear all the previous stuff
 % clc; clear;
 if ~ismac
@@ -31,7 +32,7 @@ try
     
     % %expParameters.numSegments
     logFile.iPatOnset    = zeros(expParam.numSequences, expParam.numPatterns);
-
+    
     % Prepare for the output logfiles
     logFile = saveOutput(subjectName, runNumber,logFile, cfg,'open');
     
@@ -53,9 +54,16 @@ try
     % if there's wait time,..wait
     WaitSecs(expParam.onsetDelay);
     
+    
+    % insert break
+    stopEverything = 0;
+    
     %% play different sequence
     for iseq = 1:expParam.numSequences
         
+        if stopEverything
+            break;
+        end
         
         % all stimuli made in getMainExpParams script, here we call it now
         audio2push = [cfg.seq.outAudio;cfg.seq.outAudio];
@@ -78,74 +86,81 @@ try
         
         %% check & record response/tapping
         
-        iEvent = 1;
+        %  iEvent = 1;
         
         for ipattern = 1:expParam.numPatterns
             
             
             % probably we do not need
-            logFile.isegmentCateg = cfg.seq.segmCateg(iseq);
+            logFile.isegmentCateg(ipattern,iseq) = cfg.seq.segmCateg(ipattern);
             logFile.iPatOnset(ipattern,iseq) = GetSecs() - cfg.experimentStartTime;
             
             
             % stupid way - it doesnt enter the while loop
             
-            
-            % currGridIOI = cfg.seq.gridIOI(ipattern)* iEvent -0.01;
-            currGridIOI = 0.19;
-            
-            
-            % wait for the every small grip point and register the tapping
-            % I think you want to have while loop over gridIOI * gripPoints
-            % (e.g. 12 * 0.19) but I'm looking for a way to look every
-            % 0.19s and if response, write it down, of not, insert 0
-            while GetSecs() < playTime+currGridIOI
+            for iGrid = 1:cfg.nGridPoints
+                % currGridIOI = cfg.seq.gridIOI(ipattern)* iEvent -0.01;
+                currGridIOI = iGrid * cfg.seq.gridIOI(ipattern) * ipattern
                 
-                status = PsychPortAudio('GetStatus', cfg.pahandle);
-                if ~status.Active
-                    PsychPortAudio('Stop', cfg.pahandle);
-                end
                 
-                [keyIsDown, secs, keyCode] = KbCheck(-1);
-                
-                if keyIsDown
+                % wait for the every small grip point and register the tapping
+                % I think you want to have while loop over gridIOI * gripPoints
+                % (e.g. 12 * 0.19) but I'm looking for a way to look every
+                % 0.19s and if response, write it down, of not, insert 0
+                while GetSecs() < playTime+currGridIOI
                     
-                    responseKey = KbName(find(keyCode));
-                    responseTime = secs - experimentStartTime;
-                    
-                    
-                    % ecs key press - stop playing the sounds//script
-                    if strcmp(responseKey,'ESCAPE')==1
-                        
-                        % If the script is stopped while a sequence is being
-                        % played, it close psychport audio
-                        cleanUp();
-                        
-                        return
-                        
+                    status = PsychPortAudio('GetStatus', cfg.pahandle);
+                    if ~status.Active
+                        PsychPortAudio('Stop', cfg.pahandle);
                     end
                     
-                    % % % inserting all above into function
-                    % % % failed attempt
-                    %logfile for responses - consider not using while loop above
-                    %responseEvents = getResponse('check', cfg);
-                    %cfg.responseEvents = responseEvents;
+                    % Check for experiment abortion from operator
+                    [keyIsDown, ~, keyCode] = KbCheck(cfg.keyboard);
+                    if keyIsDown && keyCode(KbName(cfg.escapeKey))
+                        stopEverything = 1;
+                        warning('OK let us get out of here')
+                        break;
+                    end
                     
-                    %here it logs every 0.18s
-                    logFile = saveOutput(subjectName,runNumber,logFile, cfg, input,iseq,ipattern);
-                    
-                    
+                    % [keyIsDown, secs, keyCode] = KbCheck(-1);
+                    % if keyIsDown
+                    %
+                    %    responseKey = KbName(find(keyCode));
+                    %    responseTime = secs - cfg.experimentStartTime;
+                    %
+                    %     % ecs key press - stop playing the sounds//script
+                    %     if strcmp(responseKey,'ESCAPE')==1
+                    %        % If the script is stopped while a sequence is being
+                    %        % played, it close psychport audio
+                    %        cleanUp();
+                    %        return
+                    %     end
+                    % end
                 end
+                
+                % % % inserting all above into function
+                % % % failed attempt
+                %logfile for responses - consider not using while loop above
+                responseEvents = getResponse('collect', cfg);
+                cfg.responseEvents = responseEvents;
+                
             end
-            iEvent = iEvent + 1;
+            %here it logs every 0.18s
+            logFile = saveOutput(subjectName,runNumber,logFile, cfg, 'saveresponse',iseq,ipattern);
             
-        
+            
+            
+            
+            
+            %             iEvent = iEvent + 1;
+            
+            
             % Save the events txt logfile
             % here in every pattern
             %
-            % logFile = saveOutput(subjectName,runNumber,logFile, cfg, input,iseq,ipattern);
+            logFile = saveOutput(subjectName,runNumber,logFile, cfg, 'save',iseq,ipattern);
             
-            % getResponse('flush', cfg);
+            getResponse('flush', cfg);
             
             
             
@@ -158,14 +173,15 @@ try
         %add a wait enter for possible breaks - needs instruction
         
         if expParam.sequenceDelay
-         %   displayInstr(expParam.delayInstruction,cfg.screen,cfg.keywait);
+            %   displayInstr(expParam.delayInstruction,cfg.screen,cfg.keywait);
             WaitSecs(expParam.pauseSeq);
-        end  
-
+        end
+        
         
     end %sequence loop
     
     %save everything into .mat file
+    % either continue saving - or create another .txt
     logFile = saveOutput(subjectName,runNumber,logFile, cfg, 'savemat');
     
     %%

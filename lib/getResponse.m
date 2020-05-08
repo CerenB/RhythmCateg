@@ -81,19 +81,19 @@ switch action
 %             fprintf('\n checking recent keypresses\n')
 %         end
         
-        iEvent = 1;
+        iResp = 1;
         
         % % % not sure if this function is working or doing what I want
         while KbEventAvail(responseBox)
             
             event = KbEventGet(responseBox);
         % % %        
-            responseEvents(iEvent,1).onset = event.Time;
-            responseEvents(iEvent,1).key_name = KbName(event.Keycode);
-            responseEvents(iEvent,1).pressed =  event.Pressed;
+            responseEvents(iResp,1).onset = event.Time;
+            responseEvents(iResp,1).key_name = KbName(event.Keycode);
+            responseEvents(iResp,1).pressed =  event.Pressed;
             
             
-            iEvent = iEvent + 1;
+            iResp = iResp + 1;
             
         end
         
